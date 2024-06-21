@@ -32,6 +32,7 @@ class DatabaseManager:
         )
         async with rows as cursor:
             result = await cursor.fetchone()
+            print(result)
             warn_id = result[0] + 1 if result is not None else 1
             await self.connection.execute(
                 "INSERT INTO warns(id, user_id, server_id, moderator_id, reason) VALUES (?, ?, ?, ?, ?)",
@@ -95,3 +96,67 @@ class DatabaseManager:
             for row in result:
                 result_list.append(row)
             return result_list
+
+    async def add_points( self, user_id, server_id: int, points: int)-> int:
+            """
+            Warns a user in his private messages.
+
+            :param context: The hybrid command context.
+            :param user_id: The user that should have points.
+            :param server_id: The server the user is in
+            :param points: The points to be added
+            """
+
+            rows = await self.connection.execute('SELECT points FROM users WHERE user_id = ? AND server_id = ?', (str(user_id),str(server_id)))
+            async with rows as cursor:
+                result = await cursor.fetchone()
+            if result:
+                new_points = result[0] + points
+                await self.connection.execute('UPDATE users SET points = ? WHERE user_id = ? AND server_id = ?', (new_points, str(user_id),str(server_id)))
+            else:
+                new_points = points
+                await self.connection.execute('INSERT INTO users (user_id, server_id, points) VALUES (?, ?, ?)', (str(user_id),str(server_id), points))
+            await self.connection.commit()
+            return new_points
+
+    async def get_points(self, user_id: int, server_id: int) -> list:
+        """
+        This function will get all the warnings of a user.
+
+        :param user_id: The ID of the user that should be checked.
+        :param server_id: The ID of the server that should be checked.
+        :return: A list of all the warnings of the user.
+        """
+        rows = await self.connection.execute(
+            "SELECT user_id, server_id, points FROM users WHERE user_id=? AND server_id=?",
+            (
+                user_id,
+                server_id,
+            ),
+        )
+        result = await rows.fetchone()
+        return result[2]
+
+    async def remove_points(self, user_id: int, server_id: int, lost_points: int) -> int:
+        """
+        This function will remove points from a user in the database.
+
+        :param points: The amount of points
+        :param user_id: The ID of the user that has lost points.
+        :param server_id: The ID of the server where the user has lost points
+        """
+        rows = await self.connection.execute(
+            "SELECT user_id, server_id, points FROM users WHERE user_id=? AND server_id=?",
+            (
+                user_id,
+                server_id,
+            ),
+        )
+        result = await rows.fetchone()
+        new_points = result[2] - lost_points if result is not None else 1
+        if result:
+            await self.connection.execute('UPDATE users SET points = ? WHERE user_id = ? AND server_id = ?', (new_points, str(user_id),str(server_id)))
+        else:
+            await self.connection.execute('INSERT INTO users (user_id, server_id, points) VALUES (?, ?, ?)', (str(user_id),str(server_id), new_points))
+        await self.connection.commit()
+        return new_points

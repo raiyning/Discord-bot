@@ -8,6 +8,7 @@ Version: 6.1.0
 
 import platform
 import random
+import string
 
 import aiohttp
 import discord
@@ -218,6 +219,8 @@ class General(commands.Cog, name="general"):
         :param context: The hybrid command context.
         :param question: The question that should be asked by the user.
         """
+
+        randLetter = random.choice(string.ascii_letters)
         answers = [
             "It is certain.",
             "It is decidedly so.",
@@ -236,9 +239,26 @@ class General(commands.Cog, name="general"):
             "Concentrate and ask again later.",
             "Don't count on it.",
             "My reply is no.",
-            "My sources say no.",
+            "My sources (raj) say no.",
             "Outlook not so good.",
             "Very doubtful.",
+            "the union of Afomaibe will decide your fate",
+            "Thug it out",
+            f"The answer is somewhere in this menu starting with the letter: {randLetter} - https://www.shahirajrestaurant.co.uk/ShahiRajInsRestaurantMenu.pdf",
+            "Yes, only if you can beat me in rocks paper scissors",
+            "No, Tell Gig to the gym",
+            "Beat Anas at any game of his choice otherwise he chooses what happens",
+            "Yes, If Gig went gym",
+            "Ask Ikehi for his wisdom",
+            "I dont know, everyone will vote for the answer",
+            "Theoretically, it could work. I would not recommend it, though.",
+            "Yes, Hot damn today was a good day",
+            "Not working right now, ask chatgpt",
+            "You should sniff it first",
+            "No time to answer, You have to invest £5 into whatever crypto raj suggests now",
+            "Unskippable 30 second ad",
+            "Yes indeed, you are the father",
+            "No, You sound bitchless"
         ]
         embed = discord.Embed(
             title="**My Answer:**",

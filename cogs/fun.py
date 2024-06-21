@@ -35,7 +35,9 @@ class Choice(discord.ui.View):
 
 
 class RockPaperScissors(discord.ui.Select):
-    def __init__(self) -> None:
+    def __init__(self,context: Context,bot) -> None:
+        self.bot = bot
+        self.context = context
         options = [
             discord.SelectOption(
                 label="Scissors", description="You choose scissors.", emoji="✂"
@@ -73,14 +75,20 @@ class RockPaperScissors(discord.ui.Select):
 
         winner = (3 + user_choice_index - bot_choice_index) % 3
         if winner == 0:
-            result_embed.description = f"**That's a draw!**\nYou've chosen {user_choice} and I've chosen {bot_choice}."
+            result_embed.description = f"**That's a draw!**\nYou've chosen {user_choice} and I've chosen {bot_choice}.`"
             result_embed.colour = 0xF59E42
+            print(self.context.author.id)
         elif winner == 1:
-            result_embed.description = f"**You won!**\nYou've chosen {user_choice} and I've chosen {bot_choice}."
+            points = 60
+            total_points = await self.bot.database.add_points( self.context.author.id, self.context.guild.id, points)
+            result_embed.description = f"**You won!**\nYou've chosen {user_choice} and I've chosen {bot_choice}.\n Your balance: `{total_points}`"
             result_embed.colour = 0x57F287
         else:
-            result_embed.description = f"**You lost!**\nYou've chosen {user_choice} and I've chosen {bot_choice}."
+            points= 30
+            total_points = await self.bot.database.remove_points(self.context.author.id, self.context.guild.id,points)
+            result_embed.description = f"**You lost!**\nYou've chosen {user_choice} and I've chosen {bot_choice}.\n Your balance: `{total_points}`"
             result_embed.colour = 0xE02B2B
+            print(self.context.author.id)
 
         await interaction.response.edit_message(
             embed=result_embed, content=None, view=None
@@ -88,9 +96,9 @@ class RockPaperScissors(discord.ui.Select):
 
 
 class RockPaperScissorsView(discord.ui.View):
-    def __init__(self) -> None:
+    def __init__(self,context: Context, bot) -> None:
         super().__init__()
-        self.add_item(RockPaperScissors())
+        self.add_item(RockPaperScissors(context,bot))
 
 
 class Fun(commands.Cog, name="fun"):
@@ -133,15 +141,20 @@ class Fun(commands.Cog, name="fun"):
         embed = discord.Embed(description="What is your bet?", color=0xBEBEFE)
         message = await context.send(embed=embed, view=buttons)
         await buttons.wait()  # We wait for the user to click a button.
-        result = random.choice(["heads", "tails"])
+        result = random.choice([ "tails"])
+        points =15
         if buttons.value == result:
+            total_points = await self.bot.database.add_points(
+            context.author.id, context.guild.id, points
+        )
             embed = discord.Embed(
-                description=f"Correct! You guessed `{buttons.value}` and I flipped the coin to `{result}`.",
+                description=f"Correct! You guessed `{buttons.value}` and I flipped the coin to `{result}`.\n Your balance: `{total_points}`",
                 color=0xBEBEFE,
             )
-        else:
+        else:  
+            total_points = await self.bot.database.remove_points(context.author.id, context.guild.id,points)       
             embed = discord.Embed(
-                description=f"Woops! You guessed `{buttons.value}` and I flipped the coin to `{result}`, better luck next time!",
+                description=f"Woops! You guessed `{buttons.value}` and I flipped the coin to `{result}`, better luck next time!\n Your balance: `{total_points}`",
                 color=0xE02B2B,
             )
         await message.edit(embed=embed, view=None, content=None)
@@ -155,8 +168,44 @@ class Fun(commands.Cog, name="fun"):
 
         :param context: The hybrid command context.
         """
-        view = RockPaperScissorsView()
+        view = RockPaperScissorsView(context, self.bot)
         await context.send("Please make your choice", view=view)
+
+    @commands.hybrid_command(
+        name="steal", description="you have a chance to steal points from another user."
+    )
+    async def steal(self, context: Context, user: discord.User) -> None:
+        """
+        you have a chance to steal points from another user. the less points you own, the higher the chance to steal. 5 percent chance for points upto 1000
+
+        :param context: The hybrid command context. 
+        :param user: The user that you are stealing points from.
+        
+        """
+        # chance to 
+        member = context.guild.get_member(user.id) or await context.guild.fetch_member(
+            user.id
+        )
+        stolen_points = random.randint(0,1000)
+
+        if random.randint(0,100) < 50: 
+            user_points = await self.bot.database.add_points(
+                context.author.id, context.guild.id, stolen_points
+            )
+            removed_total = await self.bot.database.remove_points(user.id, context.guild.id,stolen_points)
+            embed = discord.Embed(
+                description=f"**{context.author}** has stolen **{stolen_points}** points from **{member}**!\nYour total points are now: {user_points}",
+                color=0xBEBEFE,
+            )
+            embed.add_field(name="Points:", value=user_points)
+        else:
+            removed_total = await self.bot.database.remove_points(context.author.id, context.guild.id,stolen_points)
+            embed = discord.Embed(
+                description=f"**You did not manage to find anything, better luck next time** \nYour total points are now: {removed_total}",
+                color=0xE02B2B,
+            )
+            embed.add_field(name="Points:", value=removed_total)
+        await context.send(embed=embed)
 
 
 async def setup(bot) -> None:

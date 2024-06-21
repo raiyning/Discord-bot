@@ -373,3 +373,4 @@ class Moderation(commands.Cog, name="moderation"):
 
 async def setup(bot) -> None:
     await bot.add_cog(Moderation(bot))
+
